@@ -9,19 +9,40 @@ import (
 	"log"
 	"os"
 	"strings"
+	"math"
 )
 
 // var file_name = "test.png"
-var file_name = "test.png"
+var file_name = "testImage.png"
+
+func b2d(input []byte) float64 {
+	result := 0.0
+	for i, val := range(input) {
+		power := len(input) - 1 - i
+		if val == 1 {
+			result += math.Pow(2, float64(power))
+		}
+		fmt.Println(power, result)
+		}
+	return result
+}
 
 func main() {
 	pixel_array := get_image()
-	fmt.Println(len(pixel_array), len(pixel_array[0]))
-	fmt.Println(pixel_array[399][734])
+	fmt.Println(len(pixel_array))
 	// for _, val := range pixel_array[len(pixel_array)-1][len(pixel_array[0])-11:] {
-	for _, val := range pixel_array[399][735-11:] {
-		fmt.Println(" ", val.R&1, val.G&1, val.B&1)
+	fmt.Println("Last values")
+	var leng []byte
+	for i := range pixel_array[len(pixel_array)-11:] {
+		fmt.Println(i)
+		leng = append(leng, byte(pixel_array[len(pixel_array)-i-1].R&1))
+		leng = append(leng, byte(pixel_array[len(pixel_array)-i-1].G&1))
+		leng = append(leng, byte(pixel_array[len(pixel_array)-i-1].B&1))
 	}
+	// output := binary.BigEndian.Uint32(leng[:len(leng)-1])
+	// output := uint32(leng[:len(leng)-1])
+	fmt.Println(leng[:len(leng)-1])
+	fmt.Println(b2d(leng[:len(leng)-1]))
 	new_string := fmt.Sprintf("%08b", []byte("ab ab"))         // Pad with leading 0s
 	replacer := strings.NewReplacer("[", "", "]", "", " ", "") // Stripping [, ], and whitespace
 	new_string = replacer.Replace(new_string)
@@ -29,7 +50,7 @@ func main() {
 
 }
 
-func get_image() [][]Pixel {
+func get_image() []Pixel {
 	file, err := os.Open(file_name)
 	if err != nil {
 		log.Fatal(err)
@@ -37,7 +58,6 @@ func get_image() [][]Pixel {
 	defer file.Close()
 
 	pixel_array, err := get_pixel_array(file)
-	fmt.Println(pixel_array[399][len(pixel_array[0])-11:])
 	return pixel_array
 
 }
@@ -52,7 +72,7 @@ func convert_to_pixel(r uint32, g uint32, b uint32, a uint32) Pixel {
 	return Pixel{int(r / 257), int(g / 257), int(b / 257), int(a / 257)}
 }
 
-func get_pixel_array(file io.Reader) ([][]Pixel, error) {
+func get_pixel_array(file io.Reader) ([]Pixel, error) {
 	loaded_image, _, err := image.Decode(file)
 	if err != nil {
 		fmt.Println("woops")
@@ -63,17 +83,15 @@ func get_pixel_array(file io.Reader) ([][]Pixel, error) {
 	width := loaded_image.Bounds().Dx()
 	fmt.Println(loaded_image.At(width-1, height-1).RGBA())
 	fmt.Println(width, height)
-	var pixels [][]Pixel
+	var pixels []Pixel
 
 	for y := 0; y < height; y++ {
-		var row []Pixel
 		for x := 0; x < width; x++ {
-			row = append(row, convert_to_pixel(loaded_image.At(x, y).RGBA()))
-			if x == width-1 && y == height-1 {
-				fmt.Println(row[width-1])
-			}
+			pixels = append(pixels, convert_to_pixel(loaded_image.At(x, y).RGBA()))
+			// if x == width-1 && y == height-1 {
+			// 	fmt.Println(row[width-1])
+			// }
 		}
-		pixels = append(pixels, row)
 	}
 
 	return pixels, nil
