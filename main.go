@@ -22,57 +22,66 @@ type Pixel struct {
 }
 
 func main() {
-	// TESTING STRING TO BINARY
-	newString := fmt.Sprintf("%08b", []byte("is fun security")) // Pad with leading 0s
-	replacer := strings.NewReplacer("[", "", "]", "", " ", "")  // Stripping [, ], and whitespace
-	newString = replacer.Replace(newString)
-	messageLength := len(newString)
-	temp := fmt.Sprintf("%b", messageLength)
-	fmt.Println([]byte(temp))
-	fmt.Println("\noutput: ", newString, len(newString))
 
-	fmt.Println(i2b(len(newString)))
-	bitLength := i2b(len(newString))
-	fmt.Print(bitLength)
+	// TESTING STRING TO BINARY
+	newString := fmt.Sprintf("%08b", []byte("ssss"))           // Pad with leading 0s
+	replacer := strings.NewReplacer("[", "", "]", "", " ", "") // Stripping [, ], and whitespace that are added while Sprintf'ing
+	newString = replacer.Replace(newString)
+	binaryString := s2b(newString)
+	fmt.Println("\nMessage as bytes and its len: ", binaryString, len(binaryString))
+	bitLength := i2b(len(binaryString))
+	fmt.Println("Message len in bits: ", (bitLength))
+
+	fmt.Println("Quick test")
+	fmt.Println("\nBinary repr of string len", bitLength)
+
+	// Load fileName and create a placeholder with same dimensions
 	pixelArray, width, height := getImage()
 	img := image.NewNRGBA(image.Rect(0, 0, width, height))
 
-	fmt.Println("\nTesting...")
+	fmt.Println("Testing...")
 	// Have to add cases to make sure it is doing the right boolean logic for each portion... atm it's only ORing 1.
 	//		This is only helpful when you are writing a 1, not when you need to write a 0 (& 0)
-	for i := 0; i < 11; i++ {
-		fmt.Print(" r", i, ":")
-		if int(bitLength[i*3]) == 1 {
-			pixelArray[len(pixelArray)-1-i].R = pixelArray[len(pixelArray)-1-i].R | int(bitLength[i*3])
-			fmt.Print(1)
-		} else {
-			pixelArray[len(pixelArray)-1-i].R = pixelArray[len(pixelArray)-1-i].R & 254
-			fmt.Print(0)
-		}
-		fmt.Print(" g", i, ":")
-		if int(bitLength[(i*3)+1]) == 1 {
-			pixelArray[len(pixelArray)-1-i].G = pixelArray[len(pixelArray)-1-i].G | int(bitLength[(i*3)+1])
-			fmt.Print(1)
-		} else {
-			pixelArray[len(pixelArray)-1-i].G = pixelArray[len(pixelArray)-1-i].G & 254
-			fmt.Print(0)
-		}
-		if i == 10 {
-			continue
-		}
-		fmt.Print(" b", i, ":")
+	fmt.Println("\nPrinting the last 11 pixels", pixelArray[len(pixelArray)-11:])
 
-		if int(bitLength[(i*3)+2]) == 1 {
-			fmt.Print(1)
-			pixelArray[len(pixelArray)-1-i].B = pixelArray[len(pixelArray)-1-i].B | int(bitLength[(i*3)+2])
-		} else {
-			fmt.Print(0)
-			pixelArray[len(pixelArray)-1-i].B = pixelArray[len(pixelArray)-1-i].B & 254
-		}
-		// fmt.Print(" ", pixelArray[len(pixelArray)-1-i].B&1, ":", pixelArray[len(pixelArray)-1-i].B&1, ",")
-	}
-	fmt.Print("\n", pixelArray[len(pixelArray)-11:])
+	writeBits(0, pixelArray, bitLength)
 
+	fmt.Println("\nPrinting the last 11 pixels", pixelArray[len(pixelArray)-11:])
+	// for i := 0; i < 11; i++ {
+	// 	fmt.Print(" r", i, ":")
+	// 	if int(bitLength[i*3]) == 1 {
+	// 		pixelArray[len(pixelArray)-1-i].R = pixelArray[len(pixelArray)-1-i].R | int(bitLength[i*3])
+	// 	} else {
+	// 		pixelArray[len(pixelArray)-1-i].R = pixelArray[len(pixelArray)-1-i].R & 254
+	// 	}
+	// 	fmt.Print(pixelArray[len(pixelArray)-1-i].R)
+
+	// 	fmt.Print(" g", i, ":")
+	// 	if int(bitLength[(i*3)+1]) == 1 {
+	// 		pixelArray[len(pixelArray)-1-i].G = pixelArray[len(pixelArray)-1-i].G | int(bitLength[(i*3)+1])
+	// 	} else {
+	// 		pixelArray[len(pixelArray)-1-i].G = pixelArray[len(pixelArray)-1-i].G & 254
+	// 	}
+	// 	fmt.Print(pixelArray[len(pixelArray)-1-i].G)
+
+	// 	if i == 10 {
+	// 		continue
+	// 	}
+
+	// 	fmt.Print(" b", i, ":")
+	// 	if int(bitLength[(i*3)+2]) == 1 {
+	// 		pixelArray[len(pixelArray)-1-i].B = pixelArray[len(pixelArray)-1-i].B | int(bitLength[(i*3)+2])
+	// 	} else {
+	// 		pixelArray[len(pixelArray)-1-i].B = pixelArray[len(pixelArray)-1-i].B & 254
+	// 	}
+	// 	fmt.Print(pixelArray[len(pixelArray)-1-i].B)
+	// 	// fmt.Print(" ", pixelArray[len(pixelArray)-1-i].B&1, ":", pixelArray[len(pixelArray)-1-i].B&1, ",")
+	// }
+	// fmt.Println("\nPrinting the last 11 pixels", pixelArray[len(pixelArray)-11:])
+
+	fmt.Println("Number of pixels being used to write message: ", int(math.Ceil((float64(len(newString)) / 3))))
+
+	// Copying pixelArray to placeholder
 	for y := 0; y < height; y++ {
 		for x := 0; x < width; x++ {
 			img.Set(x, y, color.NRGBA{
@@ -84,6 +93,7 @@ func main() {
 		}
 	}
 
+	// Writing the placeholder to the file
 	f, err := os.Create("image.png")
 	if err != nil {
 		log.Fatal(err)
@@ -93,7 +103,44 @@ func main() {
 		log.Fatal(err)
 	}
 
+	// Checking results
 	extract()
+}
+
+func writeBits(offset int, pixelArray []Pixel, source []byte) []Pixel {
+	numPix := int(math.Ceil(float64(len(source)) / 3))
+	arrayLen := len(pixelArray)
+
+	for i := 0; i < numPix; i++ {
+		fmt.Print(" r", i, ":")
+		if int(source[i*3]) == 1 {
+			pixelArray[arrayLen-(offset+1)-i].R = pixelArray[arrayLen-(offset+1)-i].R | int(source[i*3])
+		} else {
+			pixelArray[arrayLen-(offset+1)-i].R = pixelArray[arrayLen-(offset+1)-i].R & 254
+		}
+		fmt.Print(pixelArray[arrayLen-(offset+1)-i].R)
+
+		fmt.Print(" g", i, ":")
+		if int(source[(i*3)+(offset+1)]) == 1 {
+			pixelArray[arrayLen-(offset+1)-i].G = pixelArray[arrayLen-(offset+1)-i].G | int(source[(i*3)+1])
+		} else {
+			pixelArray[arrayLen-(offset+1)-i].G = pixelArray[arrayLen-(offset+1)-i].G & 254
+		}
+		fmt.Print(pixelArray[arrayLen-(offset+1)-i].G)
+
+		if i == 10 {
+			continue
+		}
+
+		fmt.Print(" b", i, ":")
+		if int(source[(i*3)+2]) == 1 {
+			pixelArray[arrayLen-(offset+1)-i].B = pixelArray[arrayLen-(offset+1)-i].B | int(source[(i*3)+2])
+		} else {
+			pixelArray[arrayLen-(offset+1)-i].B = pixelArray[arrayLen-(offset+1)-i].B & 254
+		}
+		fmt.Print(pixelArray[arrayLen-(offset+1)-i].B)
+	}
+	return pixelArray
 }
 
 func extract() {
@@ -177,6 +224,7 @@ func toPixel(r uint32, g uint32, b uint32, a uint32) Pixel {
 }
 
 func b2d(input []byte) float64 {
+	// Takes in a binary representation and returns a decimal equivalent
 	result := 0.0
 	for i, val := range input {
 		power := len(input) - 1 - i
@@ -188,13 +236,29 @@ func b2d(input []byte) float64 {
 	return result
 }
 
-func i2b(input int) [32]byte {
-	var result [32]byte
+func i2b(input int) []byte {
+	// Converts an integer to binary
+	var result []byte
+	for i := 0; i < 32; i++ {
+		result = append(result, 0)
+	}
 	for i := 0; i < 32; i++ {
 		if (input & 1) == 1 {
 			result[31-i] = 1
 		}
 		input = input >> 1
+	}
+	return result
+}
+
+func s2b(input string) []byte {
+	var result []byte
+	for i := 0; i < len(input); i++ {
+		if input[i] == '1' {
+			result = append(result, byte(1))
+		} else {
+			result = append(result, byte(0))
+		}
 	}
 	return result
 }
