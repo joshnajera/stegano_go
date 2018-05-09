@@ -6,7 +6,6 @@ import (
 	"image/color"
 	_ "image/jpeg"
 	"image/png"
-	"io"
 	"log"
 	"math"
 	"os"
@@ -16,32 +15,26 @@ import (
 
 var fileName = "image.png"
 
-func convertString(input string) []byte {
-	var temp []byte
-	for _, char := range input {
-		for _, bytes := range i2b(int(char), 8) {
-			// Convert each character's ord value to bits
-			temp = append(temp, bytes)
-		}
-	}
-	// fmt.Println(temp)
-	return temp
-}
-
 type Pixel struct {
 	R, G, B, A int
 }
 
 func main() {
+	if len(os.Args) < 3 || (os.Args[1] != "-w" && os.Args[1] != "-r") {
+		fmt.Println("Invalid Usage")
+		fmt.Println("Usage: go run main.go -w fileName 'message here' ")
+		fmt.Println("Usage: go run main.go -r fileName ")
+		os.Exit(1)
+	}
 
+	// Checking results
+	implant("This is my test")
+	extract()
+}
+
+func implant(input string) {
 	// TESTING STRING TO BINARY
-	testString := "and then there was one"
-	newString := convertString(testString)
-	// newString := fmt.Sprintf("%08b", []byte("ssss")) // Pad with leading 0s
-	// fmt.Println(newString)
-	// replacer := strings.NewReplacer("[", "", "]", "", " ", "") // Stripping [, ], and whitespace that are added while Sprintf'ing
-	// newString = replacer.Replace(newString)
-	// binaryString := s2b(newString)
+	newString := convertString(input)
 	fmt.Println("\nMessage as bytes and its len:\n", newString, len(newString))
 	bitLength := i2b(len(newString), 32)
 	fmt.Println("Message len in bits:\n", bitLength)
@@ -83,8 +76,6 @@ func main() {
 		log.Fatal(err)
 	}
 
-	// Checking results
-	extract()
 }
 
 func writeBits(offset int, pixelArray []Pixel, source []byte) []Pixel {
@@ -178,12 +169,6 @@ func getImage() ([]Pixel, int, int) {
 	}
 	defer file.Close()
 
-	return getPixelArray(file)
-
-}
-
-func getPixelArray(file io.Reader) ([]Pixel, int, int) {
-
 	loadedImage, _, err := image.Decode(file)
 	if err != nil {
 		fmt.Println("woops")
@@ -203,6 +188,7 @@ func getPixelArray(file io.Reader) ([]Pixel, int, int) {
 	}
 
 	return pixels, width, height
+
 }
 
 func toPixel(r uint32, g uint32, b uint32, a uint32) Pixel {
@@ -238,14 +224,14 @@ func i2b(input int, numBytes int) []byte {
 	return result
 }
 
-func s2b(input string) []byte {
-	var result []byte
-	for i := 0; i < len(input); i++ {
-		if input[i] == '1' {
-			result = append(result, byte(1))
-		} else {
-			result = append(result, byte(0))
+func convertString(input string) []byte {
+	var temp []byte
+	for _, char := range input {
+		for _, bytes := range i2b(int(char), 8) {
+			// Convert each character's ord value to bits
+			temp = append(temp, bytes)
 		}
 	}
-	return result
+	// fmt.Println(temp)
+	return temp
 }
