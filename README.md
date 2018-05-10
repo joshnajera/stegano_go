@@ -1,10 +1,10 @@
-#Created by: Joshua Najera
+# Created by: Joshua Najera
 
 About
 ----
 This is a simple program that hides data in the least significant bit (LSB) of each color for each pixel. The **bottom right 11 pixels** are used to store the message length. The **remaining pixels** are used for the message itself.
 
-####How this works:
+#### How this works:
 
 Starting from the last pixel, read the LSB of the **RED** value, *then* that of the **GREEN** value, and *finally* that of the **BLUE** value. When finished, move to the pixel in front of the current one and repeat. Repeat this process as needed. When put together this forms the binary representation of the message and its length.
 
@@ -25,7 +25,7 @@ Alternatively you can build using
 
 And then run using the created binary
 
-#####Example
+##### Example
 
     go run main.go -r image.png
 
