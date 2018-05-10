@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"image"
 	"image/color"
+	"image/jpeg"
 	"image/png"
 	"io/ioutil"
 	"log"
@@ -28,7 +29,7 @@ func main() {
 	mode := os.Args[1]
 	fileName = os.Args[2]
 	if _, err := os.Stat(fileName); os.IsNotExist(err) {
-		fmt.Println("That file doesn't exist")
+		fmt.Println("Image file doesn't exist")
 		os.Exit(1)
 	}
 
@@ -39,6 +40,7 @@ func main() {
 	} else if mode == "-f" {
 		f, err := ioutil.ReadFile(os.Args[3])
 		if err != nil {
+			fmt.Println("Input text file doesn't exist")
 			log.Fatal(err)
 		}
 		write(string(f))
@@ -52,6 +54,9 @@ func write(input string) {
 
 	// Load fileName and create a placeholder with same dimensions
 	pixelArray, width, height := getImage()
+	if (height * width * 3) < (len(newString)*8)+11 {
+		log.Fatal("Message is too long for given image file.\nTry with a bigger image.")
+	}
 	img := image.NewNRGBA(image.Rect(0, 0, width, height))
 
 	// Write the length of the message
@@ -74,8 +79,9 @@ func write(input string) {
 	}
 
 	fmt.Println("Writing to file...")
-	// Writing the placeholder to the file
-	f, err := os.Create(fileName)
+	// Writing the placeholder to a png file
+	output := fileName[:len(fileName)-3] + "png"
+	f, err := os.Create(output)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -162,10 +168,23 @@ func getImage() ([]Pixel, int, int) {
 		log.Fatal(err)
 	}
 	defer file.Close()
-	loadedImage, _, err := image.Decode(file)
-	if err != nil {
-		log.Fatal(err)
+
+	fileType := fileName[len(fileName)-3:] // Get the file extension
+	var loadedImage image.Image
+	if fileType == "jpg" { // Input is a jpg
+		loadedImage, err = jpeg.Decode(file)
+		if err != nil {
+			log.Fatal(err)
+		}
+	} else if fileType == "png" { // Input is a png
+		loadedImage, _, err = image.Decode(file)
+		if err != nil {
+			log.Fatal(err)
+		}
+	} else {
+		log.Fatal("Unsuported image file type")
 	}
+
 	height := loadedImage.Bounds().Dy()
 	width := loadedImage.Bounds().Dx()
 	var pixels []Pixel
