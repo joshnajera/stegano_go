@@ -41,8 +41,8 @@ Writing a message**
 
 Writing from text file
 
-    -f imageeName "file name"
+    -f imageName "file name"
 
 Reading from an image
 
-    -r imageeName
+    -r imageName
