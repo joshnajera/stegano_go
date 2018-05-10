@@ -5,6 +5,7 @@ import (
 	"image"
 	"image/color"
 	"image/png"
+	"io/ioutil"
 	"log"
 	"math"
 	"os"
@@ -17,9 +18,10 @@ type Pixel struct {
 }
 
 func main() {
-	if len(os.Args) < 3 || (os.Args[1] != "-w" && os.Args[1] != "-r") || (os.Args[1] == "-w" && len(os.Args) != 4) {
+	if len(os.Args) < 3 || (os.Args[1] != "-w" && os.Args[1] != "-r" && os.Args[1] != "-f") || (os.Args[1] == "-w" && len(os.Args) != 4) || (os.Args[1] == "-f" && len(os.Args) != 4) {
 		fmt.Println("Invalid Usage")
 		fmt.Println("Usage: go run main.go -w fileName \"message here\" ")
+		fmt.Println("Usage: go run main.go -f fileName \"file name\" ")
 		fmt.Println("Usage: go run main.go -r fileName ")
 		os.Exit(1)
 	}
@@ -34,13 +36,18 @@ func main() {
 		write(os.Args[3])
 	} else if mode == "-r" {
 		read()
+	} else if mode == "-f" {
+		f, err := ioutil.ReadFile(os.Args[3])
+		if err != nil {
+			log.Fatal(err)
+		}
+		write(string(f))
 	}
 }
 
 func write(input string) {
 	// TESTING STRING TO BINARY
 	newString := convertString(input)
-	fmt.Println("\nMessage as bits and its len:\n", newString, len(newString))
 	bitLength := i2b(len(newString), 32)
 
 	// Load fileName and create a placeholder with same dimensions
@@ -51,7 +58,7 @@ func write(input string) {
 	writeBits(0, pixelArray, bitLength)
 	writeBits(11, pixelArray, newString)
 
-	// fmt.Println("\nPrinting the last 11 pixels\n", pixelArray[len(pixelArray)-11:])
+	fmt.Printf("Length of message: %d characters\n", len(input))
 	fmt.Println("Number of pixels being used to write message: ", int(math.Ceil((float64(len(newString)) / 3))))
 
 	// Copying pixelArray to placeholder
@@ -66,6 +73,7 @@ func write(input string) {
 		}
 	}
 
+	fmt.Println("Writing to file...")
 	// Writing the placeholder to the file
 	f, err := os.Create(fileName)
 	if err != nil {
@@ -76,10 +84,10 @@ func write(input string) {
 		log.Fatal(err)
 	}
 	fmt.Println("Done writing to file")
-
 }
 
 func writeBits(offset int, pixelArray []Pixel, source []byte) []Pixel {
+	// Takes input (source) and writes to pixelArray starting at a given offset
 	numPix := int(math.Ceil(float64(len(source)) / 3))
 	arrayLen := len(pixelArray)
 	sourceLen := len(source)
@@ -118,7 +126,6 @@ func writeBits(offset int, pixelArray []Pixel, source []byte) []Pixel {
 func read() {
 	// Open the file and get the pixel array
 	pixelArray, _, _ := getImage()
-
 	// Getting stored message length, including extra unused bit
 	var leng []byte
 	for i := range pixelArray[len(pixelArray)-11:] {
@@ -126,9 +133,8 @@ func read() {
 		leng = append(leng, byte(pixelArray[len(pixelArray)-i-1].G&1))
 		leng = append(leng, byte(pixelArray[len(pixelArray)-i-1].B&1))
 	}
-
+	// Convert from binary to decimal
 	messageLength := b2d(leng[:len(leng)-1])
-
 	// Retreive the message pixels
 	var tmpMessage []byte
 	for i := range pixelArray[(len(pixelArray) - (11 + int(math.Ceil(messageLength/3)))) : len(pixelArray)-11] {
@@ -136,7 +142,6 @@ func read() {
 		tmpMessage = append(tmpMessage, byte(pixelArray[len(pixelArray)-i-12].G&1))
 		tmpMessage = append(tmpMessage, byte(pixelArray[len(pixelArray)-i-12].B&1))
 	}
-
 	// Retreive their bits
 	var message []byte
 	for i := 0; i < int(messageLength/8); i++ {
@@ -146,26 +151,25 @@ func read() {
 		}
 		message = append(message, char)
 	}
-	fmt.Print(string(message))
-
+	fmt.Printf("Message size: %d characters\n", len(message))
+	fmt.Println("Message:\n", string(message))
 }
 
 func getImage() ([]Pixel, int, int) {
+	// Opens the image and return its pixels and dimensions
 	file, err := os.Open(fileName)
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer file.Close()
-
 	loadedImage, _, err := image.Decode(file)
 	if err != nil {
 		log.Fatal(err)
 	}
-
 	height := loadedImage.Bounds().Dy()
 	width := loadedImage.Bounds().Dx()
 	var pixels []Pixel
-
+	// Gather all the pixels
 	for y := 0; y < height; y++ {
 		for x := 0; x < width; x++ {
 			pixels = append(pixels, toPixel(loadedImage.At(x, y).RGBA()))
