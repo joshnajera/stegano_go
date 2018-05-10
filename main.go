@@ -4,14 +4,11 @@ import (
 	"fmt"
 	"image"
 	"image/color"
-	_ "image/jpeg"
 	"image/png"
 	"log"
 	"math"
 	"os"
 )
-
-// var fileName = "test.png"
 
 var fileName = "image.png"
 
@@ -20,38 +17,41 @@ type Pixel struct {
 }
 
 func main() {
-	if len(os.Args) < 3 || (os.Args[1] != "-w" && os.Args[1] != "-r") {
+	if len(os.Args) < 3 || (os.Args[1] != "-w" && os.Args[1] != "-r") || (os.Args[1] == "-w" && len(os.Args) != 4) {
 		fmt.Println("Invalid Usage")
-		fmt.Println("Usage: go run main.go -w fileName 'message here' ")
+		fmt.Println("Usage: go run main.go -w fileName \"message here\" ")
 		fmt.Println("Usage: go run main.go -r fileName ")
 		os.Exit(1)
 	}
+	mode := os.Args[1]
+	fileName = os.Args[2]
+	if _, err := os.Stat(fileName); os.IsNotExist(err) {
+		fmt.Println("That file doesn't exist")
+		os.Exit(1)
+	}
 
-	// Checking results
-	implant("This is my test")
-	extract()
+	if mode == "-w" {
+		write(os.Args[3])
+	} else if mode == "-r" {
+		read()
+	}
 }
 
-func implant(input string) {
+func write(input string) {
 	// TESTING STRING TO BINARY
 	newString := convertString(input)
-	fmt.Println("\nMessage as bytes and its len:\n", newString, len(newString))
+	fmt.Println("\nMessage as bits and its len:\n", newString, len(newString))
 	bitLength := i2b(len(newString), 32)
-	fmt.Println("Message len in bits:\n", bitLength)
 
 	// Load fileName and create a placeholder with same dimensions
 	pixelArray, width, height := getImage()
 	img := image.NewNRGBA(image.Rect(0, 0, width, height))
 
-	// Have to add cases to make sure it is doing the right boolean logic for each portion... atm it's only ORing 1.
-	//		This is only helpful when you are writing a 1, not when you need to write a 0 (& 0)
-	fmt.Println("Printing the last 11 pixels\n", pixelArray[len(pixelArray)-11:])
-
 	// Write the length of the message
 	writeBits(0, pixelArray, bitLength)
 	writeBits(11, pixelArray, newString)
 
-	fmt.Println("\nPrinting the last 11 pixels\n", pixelArray[len(pixelArray)-11:])
+	// fmt.Println("\nPrinting the last 11 pixels\n", pixelArray[len(pixelArray)-11:])
 	fmt.Println("Number of pixels being used to write message: ", int(math.Ceil((float64(len(newString)) / 3))))
 
 	// Copying pixelArray to placeholder
@@ -67,7 +67,7 @@ func implant(input string) {
 	}
 
 	// Writing the placeholder to the file
-	f, err := os.Create("image.png")
+	f, err := os.Create(fileName)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -75,6 +75,7 @@ func implant(input string) {
 		f.Close()
 		log.Fatal(err)
 	}
+	fmt.Println("Done writing to file")
 
 }
 
@@ -83,46 +84,38 @@ func writeBits(offset int, pixelArray []Pixel, source []byte) []Pixel {
 	arrayLen := len(pixelArray)
 	sourceLen := len(source)
 
-	fmt.Println("")
 	for i := 0; i < numPix; i++ {
 		position := arrayLen - 1 - offset - i
-		fmt.Print(" r", i, ":")
 		if int(source[i*3]) == 1 {
 			pixelArray[position].R = pixelArray[position].R | int(source[i*3])
 		} else {
 			pixelArray[position].R = pixelArray[position].R & 254
 		}
-		fmt.Print(pixelArray[position].R)
 
 		if (i*3)+1 >= sourceLen {
 			break
 		}
 
-		fmt.Print(" g", i, ":")
 		if int(source[(i*3)+1]) == 1 {
 			pixelArray[position].G = pixelArray[position].G | int(source[(i*3)+1])
 		} else {
 			pixelArray[position].G = pixelArray[position].G & 254
 		}
-		fmt.Print(pixelArray[position].G)
 
 		if (i*3)+2 >= sourceLen {
 			break
 		}
 
-		fmt.Print(" b", i, ":")
 		if int(source[(i*3)+2]) == 1 {
 			pixelArray[position].B = pixelArray[position].B | int(source[(i*3)+2])
 		} else {
 			pixelArray[position].B = pixelArray[position].B & 254
 		}
-		fmt.Print(pixelArray[position].B)
 	}
-	fmt.Println("")
 	return pixelArray
 }
 
-func extract() {
+func read() {
 	// Open the file and get the pixel array
 	pixelArray, _, _ := getImage()
 
@@ -135,9 +128,6 @@ func extract() {
 	}
 
 	messageLength := b2d(leng[:len(leng)-1])
-
-	// Debugging-- Getting len
-	fmt.Println("Message length: ", messageLength/8, "Characters.")
 
 	// Retreive the message pixels
 	var tmpMessage []byte
@@ -152,12 +142,10 @@ func extract() {
 	for i := 0; i < int(messageLength/8); i++ {
 		var char byte = 0
 		for j := 0; j < 8; j++ {
-			// char = append(char, byte(tmpMessage[(i*8)+j]))
 			char = (char << 1) + tmpMessage[(i*8)+j]
 		}
 		message = append(message, char)
 	}
-	// Converting
 	fmt.Print(string(message))
 
 }
@@ -171,29 +159,23 @@ func getImage() ([]Pixel, int, int) {
 
 	loadedImage, _, err := image.Decode(file)
 	if err != nil {
-		fmt.Println("woops")
 		log.Fatal(err)
 	}
 
 	height := loadedImage.Bounds().Dy()
 	width := loadedImage.Bounds().Dx()
 	var pixels []Pixel
-	// fmt.Println(loadedImage.At(width-1, height-1).RGBA())
-	// fmt.Println(width, height)
 
 	for y := 0; y < height; y++ {
 		for x := 0; x < width; x++ {
 			pixels = append(pixels, toPixel(loadedImage.At(x, y).RGBA()))
 		}
 	}
-
 	return pixels, width, height
-
 }
 
 func toPixel(r uint32, g uint32, b uint32, a uint32) Pixel {
-	// Takes in a golang pixel in rgba format
-	// and converts all the values from uint32s to normal integers
+	// Takes in a golang pixel in rgba format and converts all the values from uint32s to normal integers
 	return Pixel{int(r / 257), int(g / 257), int(b / 257), int(a / 257)}
 }
 
